@@ -6,7 +6,8 @@ import path from 'node:path';
 import { prepareArticle, apiPayload, findVault } from '../scripts/article.mjs';
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'x-draft-test-'));
+  // macOS /var is an alias for /private/var; compare canonical file locations.
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'x-draft-test-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, '.obsidian'));
   fs.writeFileSync(path.join(root, '.obsidian/app.json'), JSON.stringify({ attachmentFolderPath: '附件' }));
