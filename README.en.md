@@ -7,13 +7,13 @@
 
 Save an Obsidian or Markdown long-form article, including existing local images, as an **X Article draft**. Available as an **Obsidian desktop plugin** or an **Agent Skill** for hosts such as Codex and Claude Code. Nothing in this package publishes an Article publicly.
 
-**v0.2.0 is an experimental preview.** The plugin controls a dedicated Chrome session itself; it does not need an AI Agent or API key in browser mode. The Skill's browser route still needs the host's browser tools. Local conversion, mocked API requests, bundle loading, and the browser workflow against a local editor fixture have tests. Real X account submission has not yet been verified.
+**v0.2.1 is an experimental preview.** The plugin connects to your existing logged-in Chrome by default; it does not need an AI Agent or API key in browser mode. The Skill's browser route still needs the host's browser tools. Local conversion, mocked API requests, bundle loading, and browser attachment/composition against a local editor fixture have tests. Real X account submission has not yet been verified.
 
 ## Obsidian plugin: click to start
 
-1. Download **x-article-draft-obsidian-0.2.0.zip** from [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases/tag/v0.2.0).
+1. Download **x-article-draft-obsidian-0.2.1.zip** from [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases/tag/v0.2.1).
 2. Extract its `x-article-draft` folder into your vault's `.obsidian/plugins/` and enable **X Article Draft** in Community plugins.
-3. Click the send icon in the left ribbon. First use opens setup; log in to X in the plugin's dedicated Chrome session. Later clicks save the current note and images to a draft.
+3. In your logged-in Chrome (144+), open `chrome://inspect/#remote-debugging` and enable remote debugging. Click **Connect existing Chrome** in the plugin and approve Chrome's connection prompt. Later clicks save the current note and images to a draft. Chrome may ask for consent again on subsequent connections; the plugin does not bypass it. Dedicated Chrome remains an explicit fallback and is never launched automatically when attachment fails.
 
 Desktop only. Chrome and an Articles-capable X account are required. The release includes a bundled program, so end users do not need Node.js, npm, or an Agent. It is not listed in the Obsidian community catalog yet. The plugin has optional official API mode and a settings-based OAuth guide. [Plugin guide](docs/obsidian-plugin.md) (Chinese).
 

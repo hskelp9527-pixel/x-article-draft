@@ -1,7 +1,7 @@
 {
   "id": "x-article-draft",
   "name": "X Article Draft",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minAppVersion": "1.5.0",
   "description": "Save the current note and its local images as an X Article draft with one click. Browser mode or optional official API.",
   "author": "IAMFries",

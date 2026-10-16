@@ -2,7 +2,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { stateDir, readState, writeState, withLock } from '../scripts/storage.mjs';
-import { connectChrome, openPage, delay } from './cdp.mjs';
+import { connectChrome, connectExistingChrome, openPage, delay } from './cdp.mjs';
 
 export const ARTICLES = 'https://x.com/compose/articles';
 export const TITLE_SELECTOR = 'textarea[placeholder="Add a title"],textarea[placeholder="添加标题"],textarea[placeholder="タイトルを追加"],textarea[placeholder="제목 추가"],textarea[name="Article Title"]';
@@ -110,26 +110,39 @@ export async function compose(page, article, { pasteHtml, progress = () => {} } 
   assertSnapshot(await page.evaluate(snapshot), expected);
   return expected;
 }
-export async function loginBrowser({ executable } = {}) {
-  const { cdp } = await connectChrome({ profile: path.join(stateDir(), 'chrome-profile'), executable });
-  try { await openPage(cdp, ARTICLES); } finally { cdp.close(); }
+export async function connectBrowser({ mode = 'existing', executable, dataDir, progress } = {}) {
+  if (mode === 'existing') return connectExistingChrome({ dataDir, progress });
+  if (mode === 'dedicated') return connectChrome({ profile: path.join(stateDir(), 'chrome-profile'), executable });
+  throw new Error('未知浏览器连接方式');
 }
-export async function saveBrowser(article, { executable, pasteHtml, progress = () => {}, confirmNew = async () => false } = {}) {
+export async function existingXContext(cdp) {
+  const { targetInfos } = await cdp.send('Target.getTargets');
+  const xTabs = targetInfos.filter(t => t.type === 'page' && /^https:\/\/x\.com(?:\/|$)/.test(t.url));
+  const contexts = new Set(xTabs.map(t => t.browserContextId || ''));
+  if (contexts.size > 1) throw new Error('检测到多个 Chrome 资料中的 X 标签页。请保留目标账号所在资料的 X 标签页，再重新连接，以免存入错误账号。');
+  return xTabs[0]?.browserContextId;
+}
+export async function loginBrowser(options = {}) {
+  const { cdp } = await connectBrowser(options);
+  try { await openPage(cdp, ARTICLES, { browserContextId: await existingXContext(cdp) }); } finally { cdp.close(); }
+}
+export async function saveBrowser(article, { mode = 'existing', executable, dataDir, pasteHtml, progress = () => {}, confirmNew = async () => false } = {}) {
   return withLock('browser', async () => {
-    progress('连接专用 Chrome');
-    const { cdp } = await connectChrome({ profile: path.join(stateDir(), 'chrome-profile'), executable });
+    progress(mode === 'existing' ? '连接已登录的 Chrome' : '连接专用 Chrome');
+    const { cdp } = await connectBrowser({ mode, executable, dataDir, progress });
     try {
-      let page = await openPage(cdp, ARTICLES);
+      const browserContextId = await existingXContext(cdp);
+      let page = await openPage(cdp, ARTICLES, { browserContextId });
       await page.wait(() => !!document.querySelector('a[data-testid="AppTabBar_Profile_Link"]'), [], 15000);
       const account = await page.evaluate(() => document.querySelector('a[data-testid="AppTabBar_Profile_Link"]').getAttribute('href').replace(/^\//, ''));
-      if (!account || account.includes('/')) throw new Error('无法核对当前 X 账号；请先在专用 Chrome 中登录');
+      if (!account || account.includes('/')) throw new Error('无法核对当前 X 账号；请在所连接的 Chrome 中打开已登录的 X 标签页');
       const journal = readState('browser-journal', {});
       const noteKey = crypto.createHash('sha256').update(account + ':' + article.vault + ':' + article.note).digest('hex');
       const previous = journal[noteKey];
-      if (previous?.status === 'pending') throw new Error('上次操作尚未确认保存，请先在专用 Chrome 检查已有草稿。设置页可打开草稿箱，确认后再清除该任务记录。');
+      if (previous?.status === 'pending') throw new Error('上次操作尚未确认保存，请先在所连接的 Chrome 检查已有草稿。设置页可打开草稿箱，确认后再清除该任务记录。');
       if (previous?.fingerprint === article.fingerprint && previous.status === 'saved') {
         if (!isDraftUrl(previous.url)) throw new Error('本地草稿地址无效');
-        page = await openPage(cdp, previous.url, { reuse: false });
+        page = await openPage(cdp, previous.url, { reuse: false, browserContextId });
         await page.wait(selector => !!document.querySelector(selector), [TITLE_SELECTOR]);
         assertSnapshot(await page.evaluate(snapshot), previous.expected);
         return { ...previous, reused: true };
@@ -138,7 +151,7 @@ export async function saveBrowser(article, { executable, pasteHtml, progress = (
       const pending = { status: 'pending', title: article.title, fingerprint: article.fingerprint, account, startedAt: new Date().toISOString() };
       journal[noteKey] = pending; writeState('browser-journal', journal);
       // New isolated tab prevents accidentally overwriting a manually opened editor.
-      page = await openPage(cdp, ARTICLES, { reuse: false });
+      page = await openPage(cdp, ARTICLES, { reuse: false, browserContextId });
       await page.wait(() => document.readyState === 'complete');
       await page.wait(() => !!document.querySelector('a[data-testid="AppTabBar_Profile_Link"]'));
       await clickText(page, ['Write', 'Create', '撰写', '创建', '写文章', '書く', '작성']);

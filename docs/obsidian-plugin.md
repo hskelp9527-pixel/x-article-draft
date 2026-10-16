@@ -2,30 +2,36 @@
 
 插件可以独立运行。日常不需要打开 Agent、不需要输入命令，也不需要另外安装 Node.js。首次完成登录或授权后，打开文章，点击 Obsidian 左侧的发送图标 **“存到 X 草稿”**。
 
-当前是 **0.2.0 实验版，桌面端**。已验证插件编译、加载入口，以及独立 Chrome 对本地仿真编辑器填正文、插入图片、重新打开核验的流程。真实 X 页面可能变化；真实账号的端到端投递尚未验收，失败会停止并保留现场，不能把本地测试当作真实账号投递成功。
+当前是 **0.2.1 实验版，桌面端**。已验证插件编译、加载入口，以及连接运行中的 Chrome、保留原页面状态、填写本地仿真编辑器、插图和重新打开核验的流程。真实 X 页面可能变化；真实账号的端到端投递尚未验收，失败会停止并保留现场，不能把本地测试当作真实账号投递成功。
 
 ## 安装
 
-1. 在 [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases) 下载 `x-article-draft-obsidian-0.2.0.zip`。这是插件安装包；不要误下载 Skill 源码包。
+1. 在 [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases) 下载 `x-article-draft-obsidian-0.2.1.zip`。这是插件安装包；不要误下载 Skill 源码包。
 2. 解压，将 `x-article-draft` 文件夹放到知识库 `.obsidian/plugins/` 下。最终应该能看到 `.obsidian/plugins/x-article-draft/main.js`、`manifest.json` 和 `styles.css`。
 3. 在 Obsidian 的 **设置 → 第三方插件** 开启 `X Article Draft`。如果暂时没有出现，重启 Obsidian 后再看。当前尚未上架官方社区市场，不能承诺在市场搜索安装。
 4. 点击左侧发送图标，首次会出现配置引导。插件设置也有相同入口。
 
 仓库根目录 Release 的 `main.js`、`manifest.json`、`styles.css` 也是标准安装文件，供熟悉手动安装或 BRAT 的用户使用。用户安装 Release 文件无需 npm；开发者改源码才运行 `npm ci && npm run build`。
 
-## 默认：Chrome 浏览器
+## 默认：连接已经登录的 Chrome
 
-1. 电脑已安装 Google Chrome；插件设置中点击 **打开 Chrome 登录**。
-2. 插件自动打开专用 Chrome 窗口。用户本人登录 X，核对账号，并确认可以进入 Articles 撰写界面。登录资料保存在本机个人目录，日常 Chrome 的资料不会被复制。专用窗口首次需要单独登录一次。
+1. 保持已经登录 X 的 Chrome 打开，并保留目标账号的 X 标签页。需要 Chrome 144 或更新版本。
+2. 在该 Chrome 的地址栏打开 `chrome://inspect/#remote-debugging`，启用远程调试。插件设置中可点 **复制设置地址**。然后点 **连接已登录的 Chrome**，在 Chrome 自己的连接提示中选择允许。这个允许动作由用户完成，插件不会绕过。以后重新连接时 Chrome 仍可能要求再次允许。
 3. 回到 Obsidian，打开要保存的文章，点左侧 **存到 X 草稿**。
 4. 插件读取当前编辑器里的文字（包括还没保存到磁盘的修改），通过 Obsidian 链接解析寻找附件，填写 X 长文章，逐张上传正文图片。状态栏显示当前进度。
 5. 上传结束后等待自动保存，再重新打开同一草稿，核对标题、全文和图片数量。确认成功才显示完成。
 
-无需开发者账号或 API Key，也无需 AI Agent。你的 X 账号仍须有 Articles 使用资格。X 要求重新登录或出现账号校验时，用户在专用 Chrome 处理，再继续。自动化期间不要操作同一编辑器；完成后可在 Chrome 手动检查与发布。
+无需重新登录、开发者账号、API Key 或 AI Agent。插件不复制 Cookie、不重启或关闭你的浏览器；只连接 Chrome 官方允许的本机调试入口。账号仍须有 Articles 使用资格。自动化期间不要操作同一编辑器；完成后可手动检查与发布。如打开了多个 Chrome 资料的 X 标签页，插件会停止并要求只保留目标资料的 X 标签页，避免选错账号。
 
-专用 Chrome 通过仅绑定本机的调试连接接受插件操作。关闭专用 Chrome 即关闭该连接；插件不会自动关闭日常浏览器。插件使用系统富文本剪贴板放入正文，这一步会替换当前剪贴板内容。
+Chrome 144+ 的现有会话连接方式见 [Chrome 官方说明](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect)。插件直接实现所需连接，不安装 MCP 或额外扩展。插件使用系统富文本剪贴板放入正文，这一步会替换当前剪贴板内容。
 
-如果自动找不到 Chrome，在插件设置的 **Chrome 路径** 填完整可执行文件路径。macOS 填 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Windows 常见为 `C:\Program Files\Google\Chrome\Application\chrome.exe`。
+自定义 Chrome 数据根目录时，可在 **Chrome 数据目录** 中填写包含 `DevToolsActivePort` 的目录。Windows 默认是 `%LOCALAPPDATA%\Google\Chrome\User Data`；不是里面的 `Profile 11` 等子目录。未启用连接、用户拒绝或连接失败时明确报错，**不会自动开另一个浏览器**。
+
+### 专用 Chrome（备用）
+
+只有你在设置中明确选择 **专用 Chrome** 时，插件才使用独立资料并启动该窗口；此方式需要单独登录，Google 可能拒绝在该窗口完成登录。遇到截图中的“此浏览器或应用可能不安全”时，请改用默认的现有浏览器连接方式，不反复重试 Google 登录。插件不能保证改变启动方式即可通过 Google 的登录检查。
+
+备用方式找不到 Chrome 时可填可执行文件路径；macOS 为 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Windows 常见为 `C:\Program Files\Google\Chrome\Application\chrome.exe`。
 
 ## 官方 API（可选）
 

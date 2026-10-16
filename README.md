@@ -8,13 +8,13 @@
 
 把 Obsidian / Markdown 长文和本地图片存入 **X Articles 草稿**。现在提供 **Obsidian 插件**和 **Agent Skill** 两个入口。
 
-**当前版本 0.2.0，实验版。** 插件默认自己操作专用 Chrome，无需 AI Agent 或 API Key；也可选择官方 API。真实 X 账号投递尚未验收，不宣称所有账号即装即用。工具只存草稿。
+**当前版本 0.2.1，实验版。** 插件默认连接你已经登录的 Chrome，无需 AI Agent 或 API Key；也可选择官方 API。真实 X 账号投递尚未验收，不宣称所有账号即装即用。工具只存草稿。
 
 ## Obsidian 插件：打开文章，点一下
 
-1. 从 [v0.2.0 Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases/tag/v0.2.0) 下载 **x-article-draft-obsidian-0.2.0.zip**。
+1. 从 [v0.2.1 Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases/tag/v0.2.1) 下载 **x-article-draft-obsidian-0.2.1.zip**。
 2. 解压，将 `x-article-draft` 文件夹放到知识库 `.obsidian/plugins/`，在 Obsidian 第三方插件中开启 **X Article Draft**。
-3. 首次点左侧发送图标，按引导打开专用 Chrome 登录 X；之后打开文章，点 **存到 X 草稿** 即开始处理。
+3. 在已登录的 Chrome（144+）中打开 `chrome://inspect/#remote-debugging`，启用远程调试；插件里点 **连接已登录的 Chrome**，在 Chrome 提示中允许连接。之后打开文章，点 **存到 X 草稿** 即开始处理。
 
 插件会读取当前编辑器、通过 Obsidian 实际链接定位图片、逐张上传，并重新打开草稿核验。状态栏显示进度。安装包已包含程序，日常使用无需装 Node.js、运行命令或打开 Agent。仅桌面端，电脑需要 Chrome，账号需要有 Articles 能力；当前尚未上架 Obsidian 社区市场。
 
@@ -22,7 +22,7 @@
 
 | 入口 | 默认保存方式 | 是否需要 Agent |
 |---|---|---|
-| Obsidian 插件 | 插件自己操作专用 Chrome；可选官方 API | 不需要 |
+| Obsidian 插件 | 连接已登录的 Chrome；可选专用 Chrome 或官方 API | 不需要 |
 | Agent Skill | 宿主 Agent 操作 Chrome；可选官方 API | 需要 |
 
 ## Agent Skill：一句话调用

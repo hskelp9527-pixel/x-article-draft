@@ -45,10 +45,10 @@ export class Cdp {
     const closed = () => { for (const item of this.pending.values()) { clearTimeout(item.timer); item.reject(new Error('Chrome 已断开连接，请保留现场后重试')); } this.pending.clear(); };
     socket.on('close', closed); socket.on('error', closed);
   }
-  static async connect(url) {
+  static async connect(url, { timeout = 5000 } = {}) {
     const parsed = new URL(url);
     if (parsed.protocol !== 'ws:' || parsed.hostname !== '127.0.0.1') throw new Error('只允许连接本机 Chrome');
-    const socket = new WebSocket(url, { handshakeTimeout: 5000 });
+    const socket = new WebSocket(url, { handshakeTimeout: timeout });
     await new Promise((resolve, reject) => { socket.once('open', resolve); socket.once('error', reject); });
     return new Cdp(socket);
   }
@@ -63,6 +63,32 @@ export class Cdp {
     });
   }
   close() { this.socket.close(); }
+}
+export function defaultChromeDataDir() {
+  if (process.platform === 'win32') return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData/Local'), 'Google/Chrome/User Data');
+  if (process.platform === 'darwin') return path.join(os.homedir(), 'Library/Application Support/Google/Chrome');
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'google-chrome');
+}
+export function readChromeEndpoint(directory) {
+  const [port, endpoint] = fs.readFileSync(path.join(directory, 'DevToolsActivePort'), 'utf8').trim().split(/\r?\n/).map(x => x.trim());
+  if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535 || !/^\/devtools\/browser\/[a-zA-Z0-9-]+$/.test(endpoint)) throw new Error('Chrome 连接信息无效，请重新启用浏览器的远程调试');
+  return `ws://127.0.0.1:${port}${endpoint}`;
+}
+export async function connectExistingChrome({ dataDir = defaultChromeDataDir(), progress = () => {} } = {}) {
+  let endpoint;
+  try { endpoint = readChromeEndpoint(dataDir); }
+  catch (error) {
+    if (error.code === 'ENOENT') throw new Error('请在已经登录的 Chrome 中打开 chrome://inspect/#remote-debugging，启用远程调试，再回到 Obsidian 点击连接。需要 Chrome 144 或更新版本；不会自动启动专用浏览器。');
+    throw error;
+  }
+  progress('请在已登录的 Chrome 中允许连接');
+  try {
+    // Chrome 144+ prompts the user to approve this connection. No profile or cookies are copied.
+    const cdp = await Cdp.connect(endpoint, { timeout: 60000 });
+    return { cdp, existing: true };
+  } catch {
+    throw new Error('未能连接已登录的 Chrome。请确认浏览器仍在运行，并在 Chrome 的连接提示中点“允许”。若使用非默认 Chrome 数据目录，请在插件设置中填写；不会自动换浏览器。');
+  }
 }
 export class Page {
   constructor(cdp, sessionId, targetId) { this.cdp = cdp; this.sessionId = sessionId; this.targetId = targetId; }
@@ -107,10 +133,10 @@ export async function connectChrome({ profile, executable, url = 'https://x.com/
   const cdp = await Cdp.connect(connection.url);
   return { cdp, port: connection.port, launched };
 }
-export async function openPage(cdp, url, { targetId, reuse = true } = {}) {
+export async function openPage(cdp, url, { targetId, reuse = true, browserContextId } = {}) {
   const { targetInfos } = await cdp.send('Target.getTargets');
-  let target = targetId ? targetInfos.find(t => t.targetId === targetId) : reuse ? targetInfos.find(t => t.type === 'page' && t.url.startsWith(url)) : null;
-  if (!target) target = await cdp.send('Target.createTarget', { url });
+  let target = targetId ? targetInfos.find(t => t.targetId === targetId) : reuse ? targetInfos.find(t => t.type === 'page' && t.url.startsWith(url) && (!browserContextId || t.browserContextId === browserContextId)) : null;
+  if (!target) target = await cdp.send('Target.createTarget', { url, ...(browserContextId ? { browserContextId } : {}) });
   const attached = await cdp.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
   const page = new Page(cdp, attached.sessionId, target.targetId);
   await page.send('Page.enable', {}); await page.send('Runtime.enable', {}); await page.send('DOM.enable', {});

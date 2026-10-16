@@ -6,7 +6,7 @@ import { readState, writeState, stateDir } from '../scripts/storage.mjs';
 import { startOAuth, saveApi } from '../scripts/x-api.mjs';
 import { saveBrowser, loginBrowser, ARTICLES } from './browser.mjs';
 
-const DEFAULTS = { method: 'browser', chromePath: '', clientId: '', configured: false };
+const DEFAULTS = { method: 'browser', browserMode: 'existing', chromeDataDir: '', chromePath: '', clientId: '', configured: false };
 async function obsidianRequest(url, options = {}) {
   // Obsidian's native request API avoids browser CORS restrictions in Electron.
   let headers = { ...options.headers }, body;
@@ -73,18 +73,19 @@ export default class XArticleDraftPlugin extends Plugin {
     new MessageModal(this.app, '尚未完成保存', error.message || String(error), [{ label: '知道了' }, { label: '打开 X 草稿箱', run: () => void this.openLogin() }]).open();
   }
   openSetup() {
-    const modal = new MessageModal(this.app, '把当前文章存到 X 草稿', '默认使用专用 Chrome。第一次登录 X 后，回到 Obsidian 再点左侧“存到 X 草稿”。之后插件会自动找图、上传并检查草稿，不需要打开 AI 对话。\n\n需要能使用 X Articles 的账号。选择官方 API 的用户可在插件设置中完成授权。', [
+    const modal = new MessageModal(this.app, '连接你已登录的 Chrome', '默认复用已经登录的 Chrome，不会新开空账号浏览器。\n\n首次请在该 Chrome 打开 chrome://inspect/#remote-debugging，启用远程调试，再回来点“连接已登录的 Chrome”，并在 Chrome 提示中允许连接。之后即可点左侧“存到 X 草稿”。\n\n需要 Chrome 144+ 和能使用 X Articles 的账号。', [
       { label: '关闭' },
       { label: '插件设置', run: () => { this.app.setting.open(); this.app.setting.openTabById(this.manifest.id); } },
-      { label: '打开 Chrome 登录 X', primary: true, run: () => void this.openLogin() },
+      { label: '复制 Chrome 设置地址', run: () => { clipboard.writeText('chrome://inspect/#remote-debugging'); new Notice('已复制，请粘贴到已经登录的 Chrome 地址栏'); } },
+      { label: '连接已登录的 Chrome', primary: true, run: async () => { this.settings.browserMode = 'existing'; await this.updateSettings(); await this.openLogin(); } },
     ]);
     modal.open();
   }
   async openLogin() {
     try {
-      await loginBrowser({ executable: this.settings.chromePath || undefined });
+      await loginBrowser({ mode: this.settings.browserMode, executable: this.settings.chromePath || undefined, dataDir: this.settings.chromeDataDir || undefined, progress: message => new Notice(message, 8000) });
       this.settings.configured = true; await this.updateSettings();
-      new Notice('已打开专用 Chrome。请登录 X，并确认可以撰写 Article；之后回到 Obsidian 点“存到 X 草稿”。', 10000);
+      new Notice(this.settings.browserMode === 'existing' ? '已连接现有 Chrome，并打开 X 草稿箱。回到 Obsidian 点“存到 X 草稿”即可。' : '已打开专用 Chrome。请登录 X 后回到 Obsidian 点“存到 X 草稿”。', 10000);
     } catch (error) { new Notice(error.message, 12000); }
   }
   async authorize() {
@@ -130,7 +131,7 @@ export default class XArticleDraftPlugin extends Plugin {
         result = await saveApi(article, { request: this.request });
       } else {
         result = await saveBrowser(article, {
-          executable: this.settings.chromePath || undefined, progress,
+          mode: this.settings.browserMode, dataDir: this.settings.chromeDataDir || undefined, executable: this.settings.chromePath || undefined, progress,
           confirmNew: message => confirm(this.app, message),
           pasteHtml: async (page, html) => {
             clipboard.write({ html });
@@ -153,8 +154,15 @@ class DraftSettings extends PluginSettingTab {
     el.createEl('p', { text: '打开文章，点左侧发送图标即可开始。正文与附件只读，插件只保存 X 草稿。' });
     new Setting(el).setName('保存方式').setDesc('浏览器方式无需开发者应用；官方 API 的使用费用以 X 控制台为准。').addDropdown(drop => drop.addOption('browser', 'Chrome 浏览器（默认）').addOption('api', '官方 API').setValue(p.settings.method).onChange(async value => { p.settings.method = value; await p.updateSettings(); this.display(); }));
     if (p.settings.method === 'browser') {
-      new Setting(el).setName('第一次登录 X').setDesc('在插件专用 Chrome 里登录一次，之后保留登录状态。请确认该账号能使用 Articles。').addButton(button => button.setButtonText('打开 Chrome 登录').setCta().onClick(() => void p.openLogin()));
-      new Setting(el).setName('Chrome 路径（可选）').setDesc('一般留空自动查找。未找到 Chrome 时，填写它的完整可执行文件路径。').addText(text => text.setPlaceholder('自动查找 Chrome').setValue(p.settings.chromePath).onChange(async value => { p.settings.chromePath = value.trim(); await p.updateSettings(); }));
+      new Setting(el).setName('使用哪个浏览器').setDesc('默认连接已经登录的 Chrome。只有明确选择备用方式时，才启动专用浏览器。').addDropdown(drop => drop.addOption('existing', '已登录的 Chrome（默认）').addOption('dedicated', '专用 Chrome（备用，需要单独登录）').setValue(p.settings.browserMode).onChange(async value => { p.settings.browserMode = value; await p.updateSettings(); this.display(); }));
+      if (p.settings.browserMode === 'existing') {
+        new Setting(el).setName('首次允许连接').setDesc('在已登录的 Chrome（144+）打开 chrome://inspect/#remote-debugging 并启用，再点击连接；Chrome 询问时点允许。').addButton(button => button.setButtonText('复制设置地址').onClick(() => { clipboard.writeText('chrome://inspect/#remote-debugging'); new Notice('地址已复制，请粘贴到现有 Chrome 地址栏'); }));
+        new Setting(el).setName('连接当前浏览器').setDesc('保留目标 X 账号的标签页，直接复用登录状态，不复制 Cookie，也不关闭或重启浏览器。').addButton(button => button.setButtonText('连接已登录的 Chrome').setCta().onClick(() => void p.openLogin()));
+        new Setting(el).setName('Chrome 数据目录（可选）').setDesc('通常留空。仅自定义安装或非默认资料根目录时填写；这是包含 DevToolsActivePort 的 User Data 根目录，不是 Profile 11 子目录。').addText(text => text.setPlaceholder('自动使用 Chrome 默认数据目录').setValue(p.settings.chromeDataDir).onChange(async value => { p.settings.chromeDataDir = value.trim(); await p.updateSettings(); }));
+      } else {
+        new Setting(el).setName('打开专用 Chrome').setDesc('独立资料需要单独登录，Google 登录可能被此方式拒绝；遇到该情况请改用现有浏览器。').addButton(button => button.setButtonText('打开专用 Chrome').onClick(() => void p.openLogin()));
+        new Setting(el).setName('Chrome 路径（可选）').setDesc('一般留空自动查找。未找到 Chrome 时填写可执行文件路径。').addText(text => text.setPlaceholder('自动查找 Chrome').setValue(p.settings.chromePath).onChange(async value => { p.settings.chromePath = value.trim(); await p.updateSettings(); }));
+      }
     } else {
       const auth = readState('auth');
       el.createEl('p', { text: auth.user?.username ? '当前已授权：@' + auth.user.username : '尚未授权 X 账号。' });

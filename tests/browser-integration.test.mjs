@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
-import { chromePath, connectChrome, openPage, delay } from '../plugin/cdp.mjs';
-import { compose, snapshot, assertSnapshot, selectPlaceholder, isDraftUrl } from '../plugin/browser.mjs';
+import { chromePath, connectChrome, connectExistingChrome, readChromeEndpoint, openPage, delay } from '../plugin/cdp.mjs';
+import { compose, snapshot, assertSnapshot, selectPlaceholder, isDraftUrl, existingXContext } from '../plugin/browser.mjs';
 
 let chrome;
 try { chrome = chromePath(process.env.X_DRAFT_TEST_CHROME); } catch { /* optional local Chrome */ }
@@ -58,6 +58,12 @@ test('standalone browser fills title, pastes HTML, inserts local images and surv
   assert.equal(expected.imageCount, 2);
   const before = await page.evaluate(snapshot);
   assertSnapshot(before, expected);
+  // Attaching preserves the running browser's exact page/session, and disconnecting leaves it alive.
+  const attached = await connectExistingChrome({ dataDir: path.join(root, 'profile') });
+  const samePage = await openPage(attached.cdp, url);
+  assertSnapshot(await samePage.evaluate(snapshot), expected);
+  attached.cdp.close();
+  assertSnapshot(await page.evaluate(snapshot), expected);
   const structure = await page.evaluate(() => document.querySelector('[contenteditable]').innerHTML);
   assert.match(structure, /<strong>重点<\/strong>/);
   assert.ok(structure.indexOf('<img') > structure.indexOf('开头'));
@@ -71,6 +77,26 @@ test('standalone browser fills title, pastes HTML, inserts local images and surv
   await page.evaluate(() => { document.querySelector('[contenteditable]').innerHTML = '<p>XIMGPH_10 XIMGPH_1</p>'; });
   await selectPlaceholder(page, 'XIMGPH_1');
   assert.equal(await page.evaluate(() => getSelection().toString()), 'XIMGPH_1');
+});
+test('existing browser mode never launches a new profile when connection permission is absent', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'x-existing-browser-test-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const missing = path.join(root, 'must-not-be-created');
+  await assert.rejects(connectExistingChrome({ dataDir: missing }), /chrome:\/\/inspect/);
+  assert.equal(fs.existsSync(missing), false);
+  const portFile = path.join(root, 'DevToolsActivePort');
+  for (const invalid of ['0\n/devtools/browser/id', '65536\n/devtools/browser/id', '9222\n//example.com', '9222\n/devtools/browser/id?other=host']) {
+    fs.writeFileSync(portFile, invalid);
+    assert.throws(() => readChromeEndpoint(root), /无效/);
+  }
+  fs.writeFileSync(portFile, '9222\n/devtools/browser/test-id\n');
+  assert.equal(readChromeEndpoint(root), 'ws://127.0.0.1:9222/devtools/browser/test-id');
+});
+test('reuse the X tab browser context and stop when several profiles are ambiguous', async () => {
+  const cdp = contexts => ({ send: async () => ({ targetInfos: contexts.map(id => ({ type: 'page', url: 'https://x.com/home', browserContextId: id })) }) });
+  assert.equal(await existingXContext(cdp(['profile-a'])), 'profile-a');
+  assert.equal(await existingXContext(cdp([])), undefined);
+  await assert.rejects(existingXContext(cdp(['profile-a', 'profile-b'])), /多个 Chrome 资料/);
 });
 
 test('browser confirmation rejects missing text, missing images and unfinished uploads', () => {

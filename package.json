@@ -1,6 +1,6 @@
 {
   "name": "x-article-draft",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "Save Obsidian Markdown and local images as X Article drafts",

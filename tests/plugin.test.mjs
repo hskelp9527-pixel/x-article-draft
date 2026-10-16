@@ -31,5 +31,6 @@ test('bundled plugin loads in a desktop host and registers the clickable entry p
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(notices[0], '请先打开一篇 Markdown 文章');
   assert.equal(plugin.settings.method, 'browser');
+  assert.equal(plugin.settings.browserMode, 'existing');
   assert.equal(plugin.commands.length, 2);
 });
