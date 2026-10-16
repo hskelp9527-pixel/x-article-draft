@@ -1,0 +1,5 @@
+.x-article-draft-status { font-size: var(--font-ui-small); color: var(--text-muted); }
+.x-article-draft-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+.x-article-draft-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+.x-article-draft-progress { min-width: 240px; }
+.x-article-draft-warning { color: var(--text-warning); }

@@ -5,9 +5,17 @@
 
 [简体中文](README.md) · English · [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases) · [Report a problem](https://github.com/hskelp9527-pixel/x-article-draft/issues/new/choose)
 
-Save an Obsidian or Markdown long-form article, including existing local images, as an **X Article draft**. An Agent Skill for hosts such as Codex and Claude Code. Nothing in this package publishes an Article publicly.
+Save an Obsidian or Markdown long-form article, including existing local images, as an **X Article draft**. Available as an **Obsidian desktop plugin** or an **Agent Skill** for hosts such as Codex and Claude Code. Nothing in this package publishes an Article publicly.
 
-**v0.1.0 is an experimental preview.** Local conversion and the official API client have automated tests. Real-account end-to-end submission has not yet been verified. Browser mode requires browser-control tools in your Agent host; installing this Skill alone does not provide them.
+**v0.2.0 is an experimental preview.** The plugin controls a dedicated Chrome session itself; it does not need an AI Agent or API key in browser mode. The Skill's browser route still needs the host's browser tools. Local conversion, mocked API requests, bundle loading, and the browser workflow against a local editor fixture have tests. Real X account submission has not yet been verified.
+
+## Obsidian plugin: click to start
+
+1. Download **x-article-draft-obsidian-0.2.0.zip** from [Releases](https://github.com/hskelp9527-pixel/x-article-draft/releases/tag/v0.2.0).
+2. Extract its `x-article-draft` folder into your vault's `.obsidian/plugins/` and enable **X Article Draft** in Community plugins.
+3. Click the send icon in the left ribbon. First use opens setup; log in to X in the plugin's dedicated Chrome session. Later clicks save the current note and images to a draft.
+
+Desktop only. Chrome and an Articles-capable X account are required. The release includes a bundled program, so end users do not need Node.js, npm, or an Agent. It is not listed in the Obsidian community catalog yet. The plugin has optional official API mode and a settings-based OAuth guide. [Plugin guide](docs/obsidian-plugin.md) (Chinese).
 
 ## Why use it?
 
@@ -17,7 +25,7 @@ Save an Obsidian or Markdown long-form article, including existing local images,
 - Follow first-run setup, then reuse the local configuration and login/authorization on later runs.
 - Stop on missing or ambiguous images rather than silently omitting them.
 
-## Install
+## Agent Skill installation
 
 Requires [Node.js 22+](https://nodejs.org/en/download). Ask your Agent:
 
@@ -56,6 +64,6 @@ PNG/JPEG/WebP/GIF files up to 5MB each; files must be inside the selected vault.
 
 Credentials and submission records stay in each user's `~/.x-article-draft/`, outside the package. Prepared files contain article text and local paths and must not be shared. There is no project-hosted service or shared API key.
 
-Run `npm test` for automated tests. Clipboard behavior and real-account saves still require platform-specific acceptance testing. Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Questions: [Discussions](https://github.com/hskelp9527-pixel/x-article-draft/discussions). Sensitive reports: [SECURITY.md](SECURITY.md).
+Run `npm test` to build the plugin and run the tests. The local Chrome fixture test is skipped when Chrome is unavailable. A fixture test is not proof of successful submission to X. Clipboard behavior and real-account saves still require platform-specific acceptance testing. Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Questions: [Discussions](https://github.com/hskelp9527-pixel/x-article-draft/discussions). Sensitive reports: [SECURITY.md](SECURITY.md).
 
 MIT licensed. Browser workflow inspired by [baoyu-post-to-x](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-post-to-x); upstream scripts are not bundled. Not affiliated with X or Obsidian.

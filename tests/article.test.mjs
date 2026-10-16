@@ -92,3 +92,12 @@ test('reject external images, traversal, oversize files and reserved placeholder
   assert.throws(() => f.prepare('![[large.png]]'), /5MB/);
   assert.throws(() => f.prepare('XIMGPH_0'), /保留/);
 });
+test('plugin uses unsaved editor text and Obsidian metadata to resolve an embedded attachment', t => {
+  const f = fixture(t);
+  f.image('特殊附件/截图.png');
+  fs.writeFileSync(f.note, '磁盘旧内容');
+  const article = prepareArticle(f.note, { rawText: '编辑器新内容\n\n![[截图.png]]', resolveImagePath: () => path.join(f.root, '特殊附件/截图.png') });
+  assert.equal(article.content_state.blocks[0].text, '编辑器新内容');
+  assert.equal(article.images[0].path, path.join(f.root, '特殊附件/截图.png'));
+  assert.equal(fs.readFileSync(f.note, 'utf8'), '磁盘旧内容');
+});

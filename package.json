@@ -1,11 +1,12 @@
 {
   "name": "x-article-draft",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Save Obsidian Markdown and local images as X Article drafts",
   "license": "MIT",
   "engines": { "node": ">=22" },
-  "scripts": { "test": "node --test tests/*.test.mjs", "doctor": "node scripts/cli.mjs doctor" },
-  "dependencies": { "markdown-it": "15.0.3", "yaml": "2.9.1" }
+  "scripts": { "test": "npm run build && node --test tests/*.test.mjs", "doctor": "node scripts/cli.mjs doctor", "build": "node plugin/build.mjs", "test:browser": "node --test tests/browser-integration.test.mjs" },
+  "dependencies": { "markdown-it": "15.0.3", "yaml": "2.9.1", "ws": "8.22.0" },
+  "devDependencies": { "esbuild": "0.28.2", "obsidian": "1.14.4" }
 }

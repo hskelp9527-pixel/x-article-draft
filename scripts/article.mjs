@@ -20,7 +20,7 @@ function inside(root, target) {
   const rel = path.relative(root, target);
   return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel));
 }
-export function imageResolver(vault, note) {
+export function imageResolver(vault, note, lookup) {
   const root = fs.realpathSync(vault);
   if (!inside(root, fs.realpathSync(note))) throw new Error('笔记不在指定 vault 内');
   let attachment = '';
@@ -50,7 +50,8 @@ export function imageResolver(vault, note) {
     }
     ref = ref.split('#')[0];
     const noteDir = path.dirname(path.resolve(note));
-    const candidates = [path.resolve(noteDir, ref), path.resolve(root, ref)];
+    const resolvedLink = lookup?.(ref);
+    const candidates = [resolvedLink, path.resolve(noteDir, ref), path.resolve(root, ref)].filter(Boolean);
     if (attachment && attachment !== '/') candidates.push(path.resolve(attachment.startsWith('./') ? noteDir : root, attachment, ref));
     let found = candidates.find(file => fs.existsSync(file) && fs.statSync(file).isFile());
     if (!found) {
@@ -85,15 +86,15 @@ function parser() {
   });
   return md;
 }
-export function prepareArticle(note, { vault = findVault(note), title, cover } = {}) {
+export function prepareArticle(note, { vault = findVault(note), title, cover, rawText, resolveImagePath } = {}) {
   note = path.resolve(note);
-  const raw = fs.readFileSync(note, 'utf8').replace(/^\uFEFF/, '');
+  const raw = (rawText ?? fs.readFileSync(note, 'utf8')).replace(/^\uFEFF/, '');
   let body = raw, front = {};
   const fm = raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (fm) { front = parseYaml(fm[1]) || {}; body = raw.slice(fm[0].length); }
   const md = parser();
   const tokens = md.parse(body, {});
-  const resolve = imageResolver(vault, note);
+  const resolve = imageResolver(vault, note, resolveImagePath);
   if (/\bXIMGPH_\d+\b/.test(body)) throw new Error('正文含保留的图片占位符 XIMGPH_，请先改名');
   const images = [], warnings = [], blocks = [], entities = [];
   const entity = (type, data, mutability = 'immutable') => {

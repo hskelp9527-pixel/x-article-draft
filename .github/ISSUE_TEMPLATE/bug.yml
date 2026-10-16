@@ -9,8 +9,8 @@ body:
   - type: input
     id: environment
     attributes:
-      label: 系统与 Agent / OS and Agent host
-      placeholder: "Windows 11 + Codex / macOS + Claude Code"
+      label: 系统与使用入口 / OS and host
+      placeholder: "Windows 11 + Obsidian / macOS + Claude Code Skill"
     validations:
       required: true
   - type: input
@@ -25,6 +25,8 @@ body:
     attributes:
       label: 使用路线 / Method
       options:
+        - Obsidian 插件：Chrome 浏览器 / Plugin browser
+        - Obsidian 插件：官方 API / Plugin API
         - 浏览器 / Browser
         - 官方 API / Official API
         - 本地 prepare 或安装 / Local preparation or installation

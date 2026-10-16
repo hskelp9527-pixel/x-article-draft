@@ -19,16 +19,19 @@ export async function jsonRequest(url, options = {}, request = fetch) {
   }
   return body;
 }
-export async function startOAuth(clientId, { port = 8765, onReady = console.log, timeoutMs = 300000, request = fetch } = {}) {
+export async function startOAuth(clientId, { port = 8765, onReady = console.log, timeoutMs = 300000, request = fetch, signal } = {}) {
   if (!clientId) throw new Error('缺少 OAuth 2.0 Client ID，请先阅读 references/setup.md');
   let redirect = `http://127.0.0.1:${port}/callback`;
   const verifier = crypto.randomBytes(32).toString('base64url');
   const state = crypto.randomBytes(24).toString('hex');
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
-  let timer;
+  let timer, abort;
   const server = http.createServer();
   try {
     const code = await new Promise((resolve, reject) => {
+      if (signal?.aborted) { reject(new Error('授权已取消')); return; }
+      abort = () => reject(new Error('授权已取消'));
+      signal?.addEventListener('abort', abort, { once: true });
       server.on('error', reject);
       server.on('request', (req, res) => {
         const url = new URL(req.url, redirect);
@@ -57,7 +60,7 @@ export async function startOAuth(clientId, { port = 8765, onReady = console.log,
     writeState('auth', { clientId, ...token, expiresAt: Date.now() + (token.expires_in || 7200) * 1000, user: me.data });
     writeState('config', { ...readState('config'), method: 'api' });
     return { authorized: true, user: me.data };
-  } finally { clearTimeout(timer); server.close(); server.closeAllConnections(); }
+  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); server.close(); server.closeAllConnections(); }
 }
 export async function accessToken(request = fetch) {
   let auth = readState('auth');

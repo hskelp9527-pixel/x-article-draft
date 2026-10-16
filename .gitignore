@@ -5,3 +5,6 @@ node_modules/
 coverage/
 .DS_Store
 Thumbs.db
+main.js
+THIRD_PARTY_NOTICES.txt
+dist/
