@@ -1,0 +1,44 @@
+name: 使用问题 / Bug report
+description: 安装、找图、格式或保存草稿遇到问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 请勿上传 API Token、Cookie、授权回调 URL、个人原稿或未经脱敏的本机路径。敏感问题请使用 Security 私密报告。
+  - type: input
+    id: environment
+    attributes:
+      label: 系统与 Agent / OS and Agent host
+      placeholder: "Windows 11 + Codex / macOS + Claude Code"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Skill 版本与 Node.js 版本 / Versions
+      placeholder: "v0.1.0 / Node.js 22.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: 使用路线 / Method
+      options:
+        - 浏览器 / Browser
+        - 官方 API / Official API
+        - 本地 prepare 或安装 / Local preparation or installation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 操作、预期与实际结果 / Steps, expected and actual result
+      description: 图片问题请给一段不含私人内容的 Markdown 示例及相对目录结构。
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: 脱敏后的错误信息 / Redacted output
+      render: text

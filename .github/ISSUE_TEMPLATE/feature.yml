@@ -1,0 +1,18 @@
+name: 功能建议 / Feature request
+description: 描述你希望解决的实际使用问题
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景 / Use case
+      description: 你正在什么宿主和系统里做什么，当前哪一步不方便？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 希望的结果 / Desired outcome
+    validations:
+      required: true
